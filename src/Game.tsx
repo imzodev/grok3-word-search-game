@@ -1,4 +1,6 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { supabase } from './supabaseClient';
+import type { GameScore } from './supabaseClient';
 
 // Utility function to generate the grid
 interface GridData {
@@ -164,7 +166,14 @@ const Grid: React.FC<GridProps> = React.memo(({ grid, selectedCells, foundCells,
 // Main Game Component
 type GameState = 'notStarted' | 'playing' | 'completed';
 
+interface LeaderboardEntry extends GameScore {
+  rank?: number;
+}
+
 const Game: React.FC = () => {
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
   const [gameState, setGameState] = useState<GameState>('notStarted');
   const [elapsedTime, setElapsedTime] = useState(0);
   const [finalTime, setFinalTime] = useState(0);
@@ -192,6 +201,81 @@ const Game: React.FC = () => {
     };
   }, [gameState]);
 
+  // Load leaderboard on mount
+  useEffect(() => {
+    loadLeaderboard();
+  }, []);
+
+  const loadLeaderboard = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('game_scores')
+        .select('*')
+        .order('completion_time', { ascending: true })
+        .limit(10);
+
+      if (error) throw error;
+
+      const rankedData = data.map((entry, index) => ({
+        ...entry,
+        rank: index + 1
+      }));
+
+      setLeaderboard(rankedData);
+    } catch (err) {
+      console.error('Error loading leaderboard:', err);
+      setError('Failed to load leaderboard');
+    }
+  };
+
+  const saveScore = async () => {
+    setIsLoading(true);
+    try {
+      // First, check if user already exists
+      const { data: existingUser } = await supabase
+        .from('game_scores')
+        .select('completion_time')
+        .eq('username', username)
+        .single();
+
+      const scoreData: GameScore = {
+        username,
+        completion_time: finalTime,
+        found_words: foundWords
+      };
+
+      if (existingUser) {
+        // Only update if new time is better
+        if (finalTime < existingUser.completion_time) {
+          const { error } = await supabase
+            .from('game_scores')
+            .update(scoreData)
+            .eq('username', username);
+
+          if (error) throw error;
+          setError('');
+        } else {
+          setError(`Your best time remains ${formatTime(existingUser.completion_time)}`);
+        }
+      } else {
+        // Insert new score
+        const { error } = await supabase
+          .from('game_scores')
+          .insert([scoreData]);
+
+        if (error) throw error;
+        setError('');
+      }
+
+      await loadLeaderboard(); // Refresh leaderboard after saving
+    } catch (err) {
+      console.error('Error saving score:', err);
+      setError('Failed to save score');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (foundWords.length === currentWords.length && gameState === 'playing') {
       // Game completed
@@ -199,6 +283,13 @@ const Game: React.FC = () => {
       setFinalTime(elapsedTime);
     }
   }, [foundWords, currentWords, gameState, elapsedTime]);
+
+  // Save score when game is completed and finalTime is set
+  useEffect(() => {
+    if (gameState === 'completed' && finalTime > 0) {
+      saveScore();
+    }
+  }, [gameState, finalTime]);
 
   useEffect(() => {
     const handleMouseUp = () => {
@@ -313,12 +404,25 @@ const Game: React.FC = () => {
   const foundCells = foundWords.flatMap(word => wordPositions[word]);
   const isGameComplete = foundWords.length === currentWords.length;
 
+  const getRankEmoji = (rank: number) => {
+    switch (rank) {
+      case 1:
+        return '🥇';
+      case 2:
+        return '🥈';
+      case 3:
+        return '🥉';
+      default:
+        return '🏅';
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
       <h1 className="text-3xl font-bold mb-4">Word Search Game</h1>
       
       {gameState === 'notStarted' && (
-        <div className="text-center">
+        <div className="text-center w-full max-w-md">
           <div className="mb-6">
             <input
               type="text"
@@ -334,10 +438,39 @@ const Game: React.FC = () => {
           <button
             onClick={handleStartGame}
             disabled={!username || !!usernameError}
-            className={`bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mb-4 ${(!username || !!usernameError) ? 'opacity-50 cursor-not-allowed' : ''}`}
+            className={`bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mb-8 ${(!username || !!usernameError) ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             Start Game
           </button>
+
+          {/* Leaderboard Section */}
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">🏆 Leaderboard</h2>
+            {isLoading ? (
+              <p className="text-gray-600">Loading leaderboard...</p>
+            ) : error ? (
+              <p className="text-red-500">{error}</p>
+            ) : leaderboard.length === 0 ? (
+              <p className="text-gray-600">No scores yet. Be the first to play!</p>
+            ) : (
+              <div className="space-y-2">
+                {leaderboard.map((entry) => (
+                  <div
+                    key={entry.id}
+                    className="flex items-center justify-between py-2 px-4 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-xl" role="img" aria-label={`Rank ${entry.rank}`}>
+                        {getRankEmoji(entry.rank!)}
+                      </span>
+                      <span className="font-medium text-gray-800">{entry.username}</span>
+                    </div>
+                    <span className="text-gray-600">{formatTime(entry.completion_time)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -369,6 +502,27 @@ const Game: React.FC = () => {
             <p className="text-lg text-green-600 mb-6">
               Your problem-solving skills are impressive. Want to challenge yourself again?
             </p>
+            {isLoading ? (
+              <p className="text-blue-600 mb-4">Saving your score...</p>
+            ) : error ? (
+              <p className="text-red-600 mb-4">{error}</p>
+            ) : (
+              <div className="mb-6">
+                <h3 className="text-xl font-bold text-green-700 mb-3">Leaderboard</h3>
+                <div className="bg-white rounded-lg shadow p-4 max-h-60 overflow-y-auto">
+                  {leaderboard.map((entry) => (
+                    <div
+                      key={entry.id}
+                      className={`flex justify-between items-center py-2 ${entry.username === username ? 'bg-green-50' : ''}`}
+                    >
+                      <span className="font-bold">#{entry.rank}</span>
+                      <span className="mx-4">{entry.username}</span>
+                      <span>{formatTime(entry.completion_time)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             <button
               onClick={handleStartGame}
               className="bg-green-500 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg text-lg transition-colors duration-200"
