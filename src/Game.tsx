@@ -91,9 +91,9 @@ const generateGrid = (words: string[], size: number): GridData => {
   return { grid, wordPositions };
 };
 
-// Constants
-const wordList: string[] = ["REACT", "JAVASCRIPT", "HTML", "CSS", "NODE", "API"];
+import wordPool from './wordList.json';
 const gridSize: number = 10;
+const numWordsToSelect: number = 6;
 
 // Utility to compare arrays
 function arraysEqual(a: [number, number][], b: [number, number][]): boolean {
@@ -162,10 +162,17 @@ const Grid: React.FC<GridProps> = React.memo(({ grid, selectedCells, foundCells,
 });
 
 // Main Game Component
+type GameState = 'notStarted' | 'playing' | 'completed';
+
 const Game: React.FC = () => {
-  const [isGameStarted, setIsGameStarted] = useState(false);
+  const [gameState, setGameState] = useState<GameState>('notStarted');
   const [elapsedTime, setElapsedTime] = useState(0);
-  const { grid, wordPositions } = useMemo(() => generateGrid(wordList, gridSize), []);
+  const [finalTime, setFinalTime] = useState(0);
+  const [currentWords, setCurrentWords] = useState<string[]>([]);
+  const { grid, wordPositions } = useMemo(
+    () => currentWords.length ? generateGrid(currentWords, gridSize) : { grid: [], wordPositions: {} },
+    [currentWords]
+  );
   const [isSelecting, setIsSelecting] = useState(false);
   const [startCell, setStartCell] = useState<[number, number] | null>(null);
   const [selectedCells, setSelectedCells] = useState<[number, number][]>([]);
@@ -173,7 +180,7 @@ const Game: React.FC = () => {
 
   useEffect(() => {
     let timer: number;
-    if (isGameStarted) {
+    if (gameState === 'playing') {
       timer = window.setInterval(() => {
         setElapsedTime(prev => prev + 1);
       }, 1000);
@@ -181,14 +188,15 @@ const Game: React.FC = () => {
     return () => {
       if (timer) clearInterval(timer);
     };
-  }, [isGameStarted]);
+  }, [gameState]);
 
   useEffect(() => {
-    if (foundWords.length === wordList.length && isGameStarted) {
+    if (foundWords.length === currentWords.length && gameState === 'playing') {
       // Game completed
-      setIsGameStarted(false);
+      setGameState('completed');
+      setFinalTime(elapsedTime);
     }
-  }, [foundWords, isGameStarted]);
+  }, [foundWords, currentWords, gameState, elapsedTime]);
 
   useEffect(() => {
     const handleMouseUp = () => {
@@ -197,7 +205,7 @@ const Game: React.FC = () => {
       const forwardString = selectedCells.map(([r, c]) => grid[r][c]).join('');
       const reverseString = [...selectedCells].reverse().map(([r, c]) => grid[r][c]).join('');
 
-      for (const word of wordList) {
+      for (const word of currentWords) {
         if (!foundWords.includes(word) && (forwardString === word || reverseString === word)) {
           const positions = wordPositions[word];
           const reversePositions = [...positions].reverse();
@@ -256,48 +264,69 @@ const Game: React.FC = () => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const selectRandomWords = () => {
+    const shuffled = [...wordPool].sort(() => 0.5 - Math.random());
+    return shuffled.slice(0, numWordsToSelect);
+  };
+
   const handleStartGame = () => {
-    setIsGameStarted(true);
+    const selectedWords = selectRandomWords();
+    setCurrentWords(selectedWords);
+    setGameState('playing');
     setElapsedTime(0);
     setFoundWords([]);
+    setFinalTime(0);
   };
 
   const foundCells = foundWords.flatMap(word => wordPositions[word]);
-  const isGameComplete = foundWords.length === wordList.length;
+  const isGameComplete = foundWords.length === currentWords.length;
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
       <h1 className="text-3xl font-bold mb-4">Word Search Game</h1>
       
-      {!isGameStarted ? (
+      {gameState === 'notStarted' && (
         <button
           onClick={handleStartGame}
           className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mb-4"
         >
           Start Game
         </button>
-      ) : (
+      )}
+
+      {gameState === 'playing' && (
         <>
           <div className="text-center mb-4">
             <p className="text-xl font-bold">Time: {formatTime(elapsedTime)}</p>
           </div>
-          {isGameComplete ? (
-            <p className="text-xl text-green-600 mb-4">
-              Congratulations! You completed the game in {formatTime(elapsedTime)}!
-            </p>
-          ) : (
-            <>
-              <Grid
-                grid={grid}
-                selectedCells={selectedCells}
-                foundCells={foundCells}
-                onCellMouseDown={onCellMouseDown}
-                onCellMouseEnter={onCellMouseEnter}
-              />
-              <WordList wordList={wordList} foundWords={foundWords} />
-            </>
-          )}
+          <Grid
+            grid={grid}
+            selectedCells={selectedCells}
+            foundCells={foundCells}
+            onCellMouseDown={onCellMouseDown}
+            onCellMouseEnter={onCellMouseEnter}
+          />
+          <WordList wordList={currentWords} foundWords={foundWords} />
         </>
+      )}
+
+      {gameState === 'completed' && (
+        <div className="text-center">
+          <div className="bg-green-100 rounded-lg p-8 mb-6">
+            <h2 className="text-2xl font-bold text-green-700 mb-4">
+              Congratulations!
+            </h2>
+            <p className="text-xl text-green-600 mb-6">
+              You completed the game in {formatTime(finalTime)}!
+            </p>
+            <button
+              onClick={handleStartGame}
+              className="bg-green-500 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg text-lg transition-colors duration-200"
+            >
+              Play Again
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
