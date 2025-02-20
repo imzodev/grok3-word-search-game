@@ -402,7 +402,6 @@ const Game: React.FC = () => {
   };
 
   const foundCells = foundWords.flatMap(word => wordPositions[word]);
-  const isGameComplete = foundWords.length === currentWords.length;
 
   const getRankEmoji = (rank: number) => {
     switch (rank) {
