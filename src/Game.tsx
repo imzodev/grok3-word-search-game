@@ -168,6 +168,8 @@ const Game: React.FC = () => {
   const [gameState, setGameState] = useState<GameState>('notStarted');
   const [elapsedTime, setElapsedTime] = useState(0);
   const [finalTime, setFinalTime] = useState(0);
+  const [username, setUsername] = useState('');
+  const [usernameError, setUsernameError] = useState('');
   const [currentWords, setCurrentWords] = useState<string[]>([]);
   const { grid, wordPositions } = useMemo(
     () => currentWords.length ? generateGrid(currentWords, gridSize) : { grid: [], wordPositions: {} },
@@ -269,7 +271,37 @@ const Game: React.FC = () => {
     return shuffled.slice(0, numWordsToSelect);
   };
 
+  const validateUsername = (name: string): boolean => {
+    if (name.length < 3) {
+      setUsernameError('Username must be at least 3 characters long');
+      return false;
+    }
+    if (name.length > 24) {
+      setUsernameError('Username must be less than 24 characters long');
+      return false;
+    }
+    if (!/^[a-zA-Z0-9]+$/.test(name)) {
+      setUsernameError('Username can only contain letters and numbers');
+      return false;
+    }
+    setUsernameError('');
+    return true;
+  };
+
+  const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setUsername(value);
+    if (value) {
+      validateUsername(value);
+    } else {
+      setUsernameError('');
+    }
+  };
+
   const handleStartGame = () => {
+    if (!validateUsername(username)) {
+      return;
+    }
     const selectedWords = selectRandomWords();
     setCurrentWords(selectedWords);
     setGameState('playing');
@@ -286,12 +318,27 @@ const Game: React.FC = () => {
       <h1 className="text-3xl font-bold mb-4">Word Search Game</h1>
       
       {gameState === 'notStarted' && (
-        <button
-          onClick={handleStartGame}
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mb-4"
-        >
-          Start Game
-        </button>
+        <div className="text-center">
+          <div className="mb-6">
+            <input
+              type="text"
+              value={username}
+              onChange={handleUsernameChange}
+              placeholder="Enter your username"
+              className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-64 text-lg"
+            />
+            {usernameError && (
+              <p className="text-red-500 text-sm mt-2">{usernameError}</p>
+            )}
+          </div>
+          <button
+            onClick={handleStartGame}
+            disabled={!username || !!usernameError}
+            className={`bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mb-4 ${(!username || !!usernameError) ? 'opacity-50 cursor-not-allowed' : ''}`}
+          >
+            Start Game
+          </button>
+        </div>
       )}
 
       {gameState === 'playing' && (
@@ -314,10 +361,13 @@ const Game: React.FC = () => {
         <div className="text-center">
           <div className="bg-green-100 rounded-lg p-8 mb-6">
             <h2 className="text-2xl font-bold text-green-700 mb-4">
-              Congratulations!
+              Congratulations, {username}!
             </h2>
             <p className="text-xl text-green-600 mb-6">
-              You completed the game in {formatTime(finalTime)}!
+              Amazing job! You completed the game in {formatTime(finalTime)}!
+            </p>
+            <p className="text-lg text-green-600 mb-6">
+              Your problem-solving skills are impressive. Want to challenge yourself again?
             </p>
             <button
               onClick={handleStartGame}
