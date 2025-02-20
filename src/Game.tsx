@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 
 // Utility function to generate the grid
 interface GridData {
@@ -163,11 +163,32 @@ const Grid: React.FC<GridProps> = React.memo(({ grid, selectedCells, foundCells,
 
 // Main Game Component
 const Game: React.FC = () => {
+  const [isGameStarted, setIsGameStarted] = useState(false);
+  const [elapsedTime, setElapsedTime] = useState(0);
   const { grid, wordPositions } = useMemo(() => generateGrid(wordList, gridSize), []);
   const [isSelecting, setIsSelecting] = useState(false);
   const [startCell, setStartCell] = useState<[number, number] | null>(null);
   const [selectedCells, setSelectedCells] = useState<[number, number][]>([]);
   const [foundWords, setFoundWords] = useState<string[]>([]);
+
+  useEffect(() => {
+    let timer: number;
+    if (isGameStarted) {
+      timer = window.setInterval(() => {
+        setElapsedTime(prev => prev + 1);
+      }, 1000);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [isGameStarted]);
+
+  useEffect(() => {
+    if (foundWords.length === wordList.length && isGameStarted) {
+      // Game completed
+      setIsGameStarted(false);
+    }
+  }, [foundWords, isGameStarted]);
 
   useEffect(() => {
     const handleMouseUp = () => {
@@ -229,25 +250,55 @@ const Game: React.FC = () => {
     setSelectedCells(cells);
   };
 
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const handleStartGame = () => {
+    setIsGameStarted(true);
+    setElapsedTime(0);
+    setFoundWords([]);
+  };
+
   const foundCells = foundWords.flatMap(word => wordPositions[word]);
   const isGameComplete = foundWords.length === wordList.length;
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
       <h1 className="text-3xl font-bold mb-4">Word Search Game</h1>
-      {isGameComplete && (
-        <p className="text-xl text-green-600 mb-4">
-          Congratulations! You've found all the words!
-        </p>
+      
+      {!isGameStarted ? (
+        <button
+          onClick={handleStartGame}
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mb-4"
+        >
+          Start Game
+        </button>
+      ) : (
+        <>
+          <div className="text-center mb-4">
+            <p className="text-xl font-bold">Time: {formatTime(elapsedTime)}</p>
+          </div>
+          {isGameComplete ? (
+            <p className="text-xl text-green-600 mb-4">
+              Congratulations! You completed the game in {formatTime(elapsedTime)}!
+            </p>
+          ) : (
+            <>
+              <Grid
+                grid={grid}
+                selectedCells={selectedCells}
+                foundCells={foundCells}
+                onCellMouseDown={onCellMouseDown}
+                onCellMouseEnter={onCellMouseEnter}
+              />
+              <WordList wordList={wordList} foundWords={foundWords} />
+            </>
+          )}
+        </>
       )}
-      <Grid
-        grid={grid}
-        selectedCells={selectedCells}
-        foundCells={foundCells}
-        onCellMouseDown={onCellMouseDown}
-        onCellMouseEnter={onCellMouseEnter}
-      />
-      <WordList wordList={wordList} foundWords={foundWords} />
     </div>
   );
 };
