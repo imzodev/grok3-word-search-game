@@ -1,50 +1,45 @@
-# React + TypeScript + Vite
+# Word Search Game
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A modern, interactive word search puzzle game built with React, TypeScript, and Vite. Players can find programming-related words hidden in a grid of letters.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- 10x10 grid with randomly placed words
+- Words can be placed in 8 different directions:
+  - Horizontal (left to right and right to left)
+  - Vertical (top to bottom and bottom to top)
+  - Diagonal (all four diagonal directions)
+- Interactive word selection with mouse drag
+- Visual feedback for selected and found words
+- Word list showing remaining and found words
+- Built with modern React features and TypeScript for type safety
 
-## Expanding the ESLint configuration
+## Tech Stack
 
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
+- React 19
+- TypeScript
+- Vite
+- Tailwind CSS for styling
 
-- Configure the top-level `parserOptions` property like this:
+## Getting Started
 
-```js
-export default tseslint.config({
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
-```
+1. Clone the repository
+2. Install dependencies:
+   ```bash
+   bun install
+   ```
+3. Run the development server:
+   ```bash
+   bun run dev
+   ```
 
-- Replace `tseslint.configs.recommended` to `tseslint.configs.recommendedTypeChecked` or `tseslint.configs.strictTypeChecked`
-- Optionally add `...tseslint.configs.stylisticTypeChecked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and update the config:
+## How to Play
 
-```js
-// eslint.config.js
-import react from 'eslint-plugin-react'
+1. Look for words from the word list in the grid
+2. Click and drag your mouse over letters to select a word
+3. If the selection matches a word from the list, it will be marked as found
+4. Find all words to win!
 
-export default tseslint.config({
-  // Set the react version
-  settings: { react: { version: '18.3' } },
-  plugins: {
-    // Add the react plugin
-    react,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended rules
-    ...react.configs.recommended.rules,
-    ...react.configs['jsx-runtime'].rules,
-  },
-})
-```
+## Development
+
+This project uses Vite for fast development with HMR (Hot Module Replacement) and TypeScript for type safety. The game logic is split between the main `Game` component and utility functions for grid generation.
