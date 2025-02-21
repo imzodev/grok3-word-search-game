@@ -1,0 +1,41 @@
+Create a single-player   using React and Tailwindcss classes.
+The game should allow the user to search for words hidden in a grid of letters.
+The game should be interactive, visually appealing, and easy to play.
+
+Requirements: 
+
+Game Grid:
+Create a grid of letters (e.g., 10x10 or customizable size).
+The grid should contain a predefined list of words hidden horizontally, vertically, or diagonally.
+The remaining spaces should be filled with random letters.
+
+Word List:
+Display a list of words the player needs to find.
+Highlight found words in the list (e.g., strike through or change color).
+
+User Interaction:
+Allow the player to click and drag to select letters in the grid.
+If the selected letters form a valid word from the list, highlight the word in the grid and mark it as found in the list.
+
+Visual Feedback:
+Highlight the selected letters in the grid while the player is dragging.
+Provide visual feedback when a word is found (e.g., change the color of the letters or add a checkmark).
+
+Win Condition:
+Display a congratulatory message when all words are found.
+
+Styling:
+Use the library Tailwind CSS to make the game visually appealing.
+Ensure the grid and word list are neatly displayed.
+
+
+Optional Features:
+Add a "New Game" button to generate a new word search grid.
+
+Add a timer to track how long the player takes to find all the words.
+
+Allow the player to choose the grid size or difficulty level.
+
+Example Data: Word List: ["REACT", "JAVASCRIPT", "HTML", "CSS", "NODE", "API"]Grid Size: 10x10 (customizable)
+
+I am using bun as a package manager, react, typescript and taiwlindcss
