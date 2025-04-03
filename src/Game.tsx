@@ -107,18 +107,21 @@ function arraysEqual(a: [number, number][], b: [number, number][]): boolean {
 interface WordListProps {
   wordList: string[];
   foundWords: string[];
+  darkMode: boolean;
 }
 
-const WordList: React.FC<WordListProps> = ({ wordList, foundWords }) => {
+const WordList: React.FC<WordListProps> = ({ wordList, foundWords, darkMode }) => {
   return (
     <div className="mt-4">
-      <h2 className="text-xl font-bold">Words to Find:</h2>
+      <h2 className={`text-xl font-bold ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>Words to Find:</h2>
       <div className="flex flex-wrap gap-4">
         {wordList.map((word) => (
           <p
             key={word}
             className={`text-lg ${
-              foundWords.includes(word) ? 'line-through text-gray-500' : ''
+              foundWords.includes(word) 
+                ? 'line-through text-gray-500 dark:text-gray-400' 
+                : darkMode ? 'text-gray-200' : 'text-gray-800'
             }`}
           >
             {word}
@@ -136,9 +139,10 @@ interface GridProps {
   foundCells: [number, number][];
   onCellMouseDown: (row: number, col: number) => void;
   onCellMouseEnter: (row: number, col: number) => void;
+  darkMode: boolean;
 }
 
-const Grid: React.FC<GridProps> = React.memo(({ grid, selectedCells, foundCells, onCellMouseDown, onCellMouseEnter }) => {
+const Grid: React.FC<GridProps> = React.memo(({ grid, selectedCells, foundCells, onCellMouseDown, onCellMouseEnter, darkMode }) => {
   return (
     <div className="grid grid-cols-10 gap-1">
       {grid.map((row, rowIndex) =>
@@ -149,7 +153,13 @@ const Grid: React.FC<GridProps> = React.memo(({ grid, selectedCells, foundCells,
             <div
               key={`${rowIndex}-${colIndex}`}
               className={`w-8 h-8 flex items-center justify-center text-lg font-semibold cursor-pointer select-none ${
-                isFound ? 'bg-green-200' : isSelected ? 'bg-blue-200' : 'bg-gray-100'
+                isFound ? (darkMode ? 'bg-green-700' : 'bg-green-200') : 
+                isSelected ? (darkMode ? 'bg-blue-700' : 'bg-blue-200') : 
+                darkMode ? 'bg-gray-700' : 'bg-gray-100'
+              } ${
+                isFound ? (darkMode ? 'text-green-100' : 'text-green-900') : 
+                isSelected ? (darkMode ? 'text-blue-100' : 'text-blue-900') : 
+                darkMode ? 'text-gray-200' : 'text-gray-800'
               }`}
               onMouseDown={() => onCellMouseDown(rowIndex, colIndex)}
               onMouseEnter={() => onCellMouseEnter(rowIndex, colIndex)}
@@ -188,6 +198,7 @@ const Game: React.FC = () => {
   const [startCell, setStartCell] = useState<[number, number] | null>(null);
   const [selectedCells, setSelectedCells] = useState<[number, number][]>([]);
   const [foundWords, setFoundWords] = useState<string[]>([]);
+  const [darkMode, setDarkMode] = useState(false);
 
   useEffect(() => {
     let timer: number;
@@ -416,9 +427,19 @@ const Game: React.FC = () => {
     }
   };
 
+  const toggleDarkMode = () => {
+    setDarkMode(!darkMode);
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
-      <h1 className="text-3xl font-bold mb-4">Word Search Game</h1>
+    <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gray-50'} flex flex-col items-center justify-center p-4`}>
+      <button 
+        onClick={toggleDarkMode}
+        className="absolute top-4 right-4 p-2 rounded bg-gray-200 dark:bg-gray-700"
+      >
+        {darkMode ? '☀️' : '🌙'}
+      </button>
+      <h1 className={`text-3xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>Word Search Game</h1>
       
       {gameState === 'notStarted' && (
         <div className="text-center w-full max-w-md">
@@ -428,10 +449,10 @@ const Game: React.FC = () => {
               value={username}
               onChange={handleUsernameChange}
               placeholder="Enter your username"
-              className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-64 text-lg"
+              className={`px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-64 text-lg ${darkMode ? 'bg-gray-700 text-white' : 'bg-white'}`}
             />
             {usernameError && (
-              <p className="text-red-500 text-sm mt-2">{usernameError}</p>
+              <p className={`text-red-500 text-sm mt-2 ${darkMode ? 'text-red-300' : ''}`}>{usernameError}</p>
             )}
           </div>
           <button
@@ -443,28 +464,28 @@ const Game: React.FC = () => {
           </button>
 
           {/* Leaderboard Section */}
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">🏆 Leaderboard</h2>
+          <div className={`bg-gray-100 ${darkMode ? 'bg-gray-800' : ''} rounded-lg shadow-lg p-6`}>
+            <h2 className={`text-2xl font-bold text-gray-800 ${darkMode ? 'text-white' : ''} mb-4`}>🏆 Leaderboard</h2>
             {isLoading ? (
-              <p className="text-gray-600">Loading leaderboard...</p>
+              <p className={`text-gray-600 ${darkMode ? 'text-gray-400' : ''}`}>Loading leaderboard...</p>
             ) : error ? (
-              <p className="text-red-500">{error}</p>
+              <p className={`text-red-500 ${darkMode ? 'text-red-300' : ''}`}>{error}</p>
             ) : leaderboard.length === 0 ? (
-              <p className="text-gray-600">No scores yet. Be the first to play!</p>
+              <p className={`text-gray-600 ${darkMode ? 'text-gray-400' : ''}`}>No scores yet. Be the first to play!</p>
             ) : (
               <div className="space-y-2">
                 {leaderboard.map((entry) => (
                   <div
                     key={entry.id}
-                    className="flex items-center justify-between py-2 px-4 rounded-lg hover:bg-gray-50 transition-colors"
+                    className={`flex items-center justify-between py-2 ${entry.username === username ? 'bg-green-50' : ''} ${darkMode ? 'bg-gray-700' : ''}`}
                   >
                     <div className="flex items-center gap-3">
                       <span className="text-xl" role="img" aria-label={`Rank ${entry.rank}`}>
                         {getRankEmoji(entry.rank!)}
                       </span>
-                      <span className="font-medium text-gray-800">{entry.username}</span>
+                      <span className={`font-medium text-gray-800 ${darkMode ? 'text-white' : ''}`}>{entry.username}</span>
                     </div>
-                    <span className="text-gray-600">{formatTime(entry.completion_time)}</span>
+                    <span className={`text-gray-600 ${darkMode ? 'text-gray-400' : ''}`}>{formatTime(entry.completion_time)}</span>
                   </div>
                 ))}
               </div>
@@ -476,7 +497,7 @@ const Game: React.FC = () => {
       {gameState === 'playing' && (
         <>
           <div className="text-center mb-4">
-            <p className="text-xl font-bold">Time: {formatTime(elapsedTime)}</p>
+            <p className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>Time: {formatTime(elapsedTime)}</p>
           </div>
           <Grid
             grid={grid}
@@ -484,35 +505,36 @@ const Game: React.FC = () => {
             foundCells={foundCells}
             onCellMouseDown={onCellMouseDown}
             onCellMouseEnter={onCellMouseEnter}
+            darkMode={darkMode}
           />
-          <WordList wordList={currentWords} foundWords={foundWords} />
+          <WordList wordList={currentWords} foundWords={foundWords} darkMode={darkMode} />
         </>
       )}
 
       {gameState === 'completed' && (
         <div className="text-center">
-          <div className="bg-green-100 rounded-lg p-8 mb-6">
-            <h2 className="text-2xl font-bold text-green-700 mb-4">
+          <div className={`bg-green-100 ${darkMode ? 'bg-green-900' : ''} rounded-lg p-8 mb-6`}>
+            <h2 className={`text-2xl font-bold text-green-700 ${darkMode ? 'text-green-400' : ''} mb-4`}>
               Congratulations, {username}!
             </h2>
-            <p className="text-xl text-green-600 mb-6">
+            <p className={`text-xl text-green-600 ${darkMode ? 'text-green-400' : ''} mb-6`}>
               Amazing job! You completed the game in {formatTime(finalTime)}!
             </p>
-            <p className="text-lg text-green-600 mb-6">
+            <p className={`text-lg text-green-600 ${darkMode ? 'text-green-400' : ''} mb-6`}>
               Your problem-solving skills are impressive. Want to challenge yourself again?
             </p>
             {isLoading ? (
-              <p className="text-blue-600 mb-4">Saving your score...</p>
+              <p className={`text-blue-600 ${darkMode ? 'text-blue-400' : ''} mb-4`}>Saving your score...</p>
             ) : error ? (
-              <p className="text-red-600 mb-4">{error}</p>
+              <p className={`text-red-600 ${darkMode ? 'text-red-400' : ''} mb-4`}>{error}</p>
             ) : (
               <div className="mb-6">
-                <h3 className="text-xl font-bold text-green-700 mb-3">Leaderboard</h3>
-                <div className="bg-white rounded-lg shadow p-4 max-h-60 overflow-y-auto">
+                <h3 className={`text-xl font-bold text-green-700 ${darkMode ? 'text-green-400' : ''} mb-3`}>Leaderboard</h3>
+                <div className={`bg-white ${darkMode ? 'bg-gray-800' : ''} rounded-lg shadow p-4 max-h-60 overflow-y-auto`}>
                   {leaderboard.map((entry) => (
                     <div
                       key={entry.id}
-                      className={`flex justify-between items-center py-2 ${entry.username === username ? 'bg-green-50' : ''}`}
+                      className={`flex justify-between items-center py-2 ${entry.username === username ? 'bg-green-50' : ''} ${darkMode ? 'bg-gray-700' : ''}`}
                     >
                       <span className="font-bold">#{entry.rank}</span>
                       <span className="mx-4">{entry.username}</span>
@@ -524,7 +546,7 @@ const Game: React.FC = () => {
             )}
             <button
               onClick={handleStartGame}
-              className="bg-green-500 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg text-lg transition-colors duration-200"
+              className={`bg-green-500 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg text-lg transition-colors duration-200`}
             >
               Play Again
             </button>
